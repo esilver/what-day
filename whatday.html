@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Full‑Date Challenge – DoW Trainer</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-50 flex items-center justify-center p-4 relative">
+  <!-- Overlay (start screen) -->
+  <div id="overlay" class="absolute inset-0 bg-gray-900/60 flex items-center justify-center">
+    <button id="startBtn" class="px-8 py-3 text-xl font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-2xl shadow-lg">
+      Start Challenge
+    </button>
+  </div>
+
+  <!-- Main game card -->
+  <div id="game" class="hidden bg-white shadow-2xl rounded-2xl p-8 w-full max-w-md text-center select-none">
+    <h1 class="text-3xl font-bold mb-2">Full‑Date Challenge</h1>
+    <p class="text-sm text-gray-600 mb-6">Guess the three codes, then pick the weekday.</p>
+
+    <div id="date" class="text-4xl font-mono mb-4">--</div>
+    <p id="stepLabel" class="text-lg font-semibold mb-3">Guess Date Value</p>
+
+    <div id="numGrid" class="grid grid-cols-7 gap-2 mb-4"></div>
+    <div id="wkGrid" class="grid grid-cols-7 gap-1 mb-4 hidden"></div>
+
+    <div id="calcBar" class="text-xl font-mono mb-4">DV ?  +  CC ?  +  YC ?  =  ?</div>
+    <div id="feedback" class="text-xl font-semibold min-h-[1.5rem] mb-1"></div>
+    <div id="wkFeedback" class="text-xl font-semibold min-h-[1.5rem] mb-1"></div>
+    <div id="time" class="text-sm text-gray-500 min-h-[1.2rem] mb-4"></div>
+    <div id="summary" class="text-xl font-bold min-h-[1.5rem] mb-6"></div>
+
+    <button id="nextBtn" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-xl">Next Date</button>
+  </div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    /* ===== Helpers ===== */
+    const toSigned = v => (v > 3 ? v - 7 : v);
+    const mod      = (n,m) => ((n % m) + m) % m;
+    const fmt      = n => (n >= 0 ? `+${n}` : String(n));
+    const yearCode = yy => toSigned((yy + Math.floor(yy/4)) % 7);
+
+    const CENTURY_CODES = [2,0,-2,3];
+    const SIGNED_DAY = { '-3':'Thu','-2':'Fri','-1':'Sat','0':'Sun','1':'Mon','2':'Tue','3':'Wed' };
+    const STEPS = ['DV','YC','CC'];
+
+    /* ===== Build date table ===== */
+    const DATE_TABLE = (()=>{
+      const lens=[31,28,31,30,31,30,31,31,30,31,30,31];
+      const names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      let val=-2; const out=[];
+      for(let m=0;m<12;m++){
+        for(let d=1;d<=lens[m];d++){
+          out.push({label:`${names[m]} ${String(d).padStart(2,'0')}`,code:toSigned(val)});
+          val=toSigned((val+1)%7);
+        }
+      }
+      return out;
+    })();
+
+    /* ===== DOM refs ===== */
+    const overlay = document.getElementById('overlay');
+    const startBtn = document.getElementById('startBtn');
+    const gameCard = document.getElementById('game');
+
+    const dateEl = document.getElementById('date');
+    const stepEl = document.getElementById('stepLabel');
+    const calcEl = document.getElementById('calcBar');
+    const fbEl   = document.getElementById('feedback');
+    const wkFbEl = document.getElementById('wkFeedback');
+    const timeEl = document.getElementById('time');
+    const sumEl  = document.getElementById('summary');
+
+    const numGrid = document.getElementById('numGrid');
+    const wkGrid  = document.getElementById('wkGrid');
+    const nextBtn = document.getElementById('nextBtn');
+
+    /* ===== Create buttons ===== */
+    [-3,-2,-1,0,1,2,3].forEach(v=>{
+      const b=document.createElement('button');
+      b.className='numBtn bg-gray-200 rounded-lg py-1';
+      b.dataset.val=v;
+      b.textContent=fmt(v);
+      numGrid.appendChild(b);
+    });
+    ['Thu','Fri','Sat','Sun','Mon','Tue','Wed'].forEach(dw=>{
+      const b=document.createElement('button');
+      b.className='wkBtn bg-gray-100 rounded py-1';
+      b.dataset.dw=dw;
+      b.textContent=dw;
+      wkGrid.appendChild(b);
+    });
+
+    const numBtns=document.querySelectorAll('.numBtn');
+    const wkBtns =document.querySelectorAll('.wkBtn');
+    const setEnabled=(nodes,flag)=>nodes.forEach(n=>n.disabled=!flag);
+
+    /* ===== Game state ===== */
+    let state=null;
+
+    const newRound=()=>{
+      const year = Math.floor(Math.random()*200)+1900;  // Only 1900-2099
+      const dt   = DATE_TABLE[Math.floor(Math.random()*DATE_TABLE.length)];
+      const yy   = year%100;
+      state={
+        year,
+        dv:dt.code,
+        yc:yearCode(yy),
+        cc:CENTURY_CODES[Math.floor(year/100)%4],
+        label:`${dt.label} ${year}`,
+        step:0,
+        inputs:{},
+        done:false,
+        start:performance.now()
+      };
+      fbEl.textContent=wkFbEl.textContent=sumEl.textContent=timeEl.textContent='';
+      wkGrid.classList.add('hidden');
+      setEnabled(numBtns,true); setEnabled(wkBtns,false);
+      render();
+    };
+
+    /* ===== Render ===== */
+    const render=()=>{
+      dateEl.textContent=state.label;
+      stepEl.textContent=state.step<3?`Guess ${STEPS[state.step]}`:'Pick the weekday';
+      const dvTxt= state.step>=3?fmt(state.dv):(state.inputs.dv??'?');
+      const ycTxt= state.step>=3?fmt(state.yc):(state.inputs.yc??'?');
+      const ccTxt= state.step>=3?fmt(state.cc):(state.inputs.cc??'?');
+      calcEl.textContent=`DV ${dvTxt}  +  CC ${ccTxt}  +  YC ${ycTxt}  =  ?`;
+    };
+
+    /* ===== Feedback ===== */
+    const showPart=(ok,part,val)=>{
+      fbEl.className='text-xl font-semibold '+(ok?'text-green-600':'text-red-600');
+      fbEl.textContent= ok?`${part} ✔`:`${part} ✖ ( ${fmt(val)} )`;
+    };
+    const showSummary=()=>{
+      const {dv,yc,cc}=state; const sum=dv+yc+cc; const red=toSigned(mod(sum,7));
+      sumEl.textContent=`${fmt(dv)} + ${fmt(cc)} + ${fmt(yc)} = ${fmt(sum)} → ${fmt(red)} → ${SIGNED_DAY[red]}`;
+      timeEl.textContent=`Time: ${((performance.now()-state.start)/1000).toFixed(1)} s`;
+    };
+
+    /* ===== Handlers ===== */
+    numGrid.addEventListener('click',e=>{
+      if(!e.target.classList.contains('numBtn')||state.done) return;
+      const val=Number(e.target.dataset.val);
+      if(state.step===0){
+        showPart(val===state.dv,'DV',state.dv);
+        state.inputs.dv=val; state.step=1;
+      } else if(state.step===1){
+        showPart(val===state.yc,'YC',state.yc);
+        state.inputs.yc=val; state.step=2;
+      } else if(state.step===2){
+        showPart(val===state.cc,'CC',state.cc);
+        state.inputs.cc=val; state.step=3;
+        setEnabled(numBtns,false);
+        setEnabled(wkBtns,true);
+        wkGrid.classList.remove('hidden');
+      }
+      render();
+    });
+
+    wkGrid.addEventListener('click',e=>{
+      if(!e.target.classList.contains('wkBtn')||state.done) return;
+      const picked=e.target.dataset.dw;
+      const correct=SIGNED_DAY[toSigned(mod(state.dv+state.yc+state.cc,7))];
+      wkFbEl.className='text-xl font-semibold '+(picked===correct?'text-green-600':'text-red-600');
+      wkFbEl.textContent= picked===correct?'Weekday ✔':`Weekday ✖ ( ${correct} )`;
+      state.done=true;
+      setEnabled(wkBtns,false);
+      showSummary();
+    });
+
+    nextBtn.addEventListener('click',()=>{
+      if(!gameCard.classList.contains('hidden')) newRound();
+    });
+
+    startBtn.addEventListener('click',()=>{
+      overlay.classList.add('hidden');
+      gameCard.classList.remove('hidden');
+      newRound();
+    });
+  });
+</script>
+</body>
+</html>
