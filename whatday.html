@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="h-screen bg-gray-50 flex items-center justify-center p-4 relative" style="overflow-y: auto; -webkit-overflow-scrolling: touch;">
+<body class="min-h-screen bg-gray-50 flex items-center justify-center p-2 relative" style="-webkit-overflow-scrolling: touch;">
   <!-- Overlay (start screen) -->
   <div id="overlay" class="absolute inset-0 bg-gray-900/60 flex items-center justify-center">
     <button id="startBtn" class="px-8 py-3 text-xl font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-2xl shadow-lg">
@@ -15,23 +15,23 @@
   </div>
 
   <!-- Main game card -->
-  <div id="game" class="hidden bg-white shadow-2xl rounded-2xl p-8 w-full max-w-md text-center select-none">
-    <h1 class="text-3xl font-bold mb-2">Full‑Date Challenge</h1>
-    <p class="text-sm text-gray-600 mb-6">Guess the three codes, then pick the weekday.</p>
+  <div id="game" class="hidden bg-white shadow-2xl rounded-2xl p-3 sm:p-4 w-full max-w-md text-center select-none">
+    <h1 class="text-xl sm:text-2xl font-bold mb-1">Full‑Date Challenge</h1>
+    <p class="text-xs sm:text-sm text-gray-600 mb-2">Guess the three codes, then pick the weekday.</p>
 
-    <div id="date" class="text-4xl font-mono mb-4">--</div>
-    <p id="stepLabel" class="text-lg font-semibold mb-3">Guess Date Value</p>
+    <div id="date" class="text-2xl sm:text-3xl font-mono mb-2">--</div>
+    <p id="stepLabel" class="text-base sm:text-lg font-semibold mb-1.5">Guess Date Value</p>
 
-    <div id="numGrid" class="grid grid-cols-7 gap-2 mb-4"></div>
-    <div id="wkGrid" class="grid grid-cols-7 gap-1 mb-4 hidden"></div>
+    <div id="numGrid" class="grid grid-cols-7 gap-1 sm:gap-1.5 mb-2"></div>
+    <div id="wkGrid" class="grid grid-cols-7 gap-1 mb-2 hidden"></div>
 
-    <div id="calcBar" class="text-xl font-mono mb-4">DV ?  +  CC ?  +  YC ?  =  ?</div>
-    <div id="feedback" class="text-xl font-semibold min-h-[1.5rem] mb-1"></div>
-    <div id="wkFeedback" class="text-xl font-semibold min-h-[1.5rem] mb-1"></div>
-    <div id="time" class="text-sm text-gray-500 min-h-[1.2rem] mb-4"></div>
-    <div id="summary" class="text-xl font-bold min-h-[1.5rem] mb-6"></div>
+    <div id="calcBar" class="text-sm sm:text-base font-mono mb-1.5">DV ?  +  CC ?  +  YC ?  =  ?</div>
+    <div id="feedback" class="text-sm sm:text-base font-semibold min-h-[1.25rem] mb-0.5"></div>
+    <div id="wkFeedback" class="text-sm sm:text-base font-semibold min-h-[1.25rem] mb-0.5"></div>
+    <div id="time" class="text-xs text-gray-500 min-h-[1rem] mb-1"></div>
+    <div id="summary" class="text-sm sm:text-base font-bold min-h-[1.25rem] mb-1.5"></div>
 
-    <button id="nextBtn" class="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-xl">Next Date</button>
+    <button id="nextBtn" class="w-full bg-green-600 hover:bg-green-700 text-white py-1.5 sm:py-2 rounded-xl text-sm sm:text-base">Next Date</button>
   </div>
 
 <script>
@@ -80,14 +80,14 @@
     /* ===== Create buttons ===== */
     [-3,-2,-1,0,1,2,3].forEach(v=>{
       const b=document.createElement('button');
-      b.className='numBtn bg-gray-200 rounded-lg py-1';
+      b.className='numBtn bg-gray-200 rounded-lg py-0.5 sm:py-1 text-sm sm:text-base';
       b.dataset.val=v;
       b.textContent=fmt(v);
       numGrid.appendChild(b);
     });
     ['Thu','Fri','Sat','Sun','Mon','Tue','Wed'].forEach(dw=>{
       const b=document.createElement('button');
-      b.className='wkBtn bg-gray-100 rounded py-1';
+      b.className='wkBtn bg-gray-100 rounded py-0.5 sm:py-1 text-sm sm:text-base';
       b.dataset.dw=dw;
       b.textContent=dw;
       wkGrid.appendChild(b);
@@ -133,7 +133,7 @@
 
     /* ===== Feedback ===== */
     const showPart=(ok,part,val)=>{
-      fbEl.className='text-xl font-semibold '+(ok?'text-green-600':'text-red-600');
+      fbEl.className='text-sm sm:text-base font-semibold '+(ok?'text-green-600':'text-red-600');
       fbEl.textContent= ok?`${part} ✔`:`${part} ✖ ( ${fmt(val)} )`;
     };
     const showSummary=()=>{
@@ -166,7 +166,7 @@
       if(!e.target.classList.contains('wkBtn')||state.done) return;
       const picked=e.target.dataset.dw;
       const correct=SIGNED_DAY[toSigned(mod(state.dv+state.yc+state.cc,7))];
-      wkFbEl.className='text-xl font-semibold '+(picked===correct?'text-green-600':'text-red-600');
+      wkFbEl.className='text-sm sm:text-base font-semibold '+(picked===correct?'text-green-600':'text-red-600');
       wkFbEl.textContent= picked===correct?'Weekday ✔':`Weekday ✖ ( ${correct} )`;
       state.done=true;
       setEnabled(wkBtns,false);
